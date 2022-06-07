@@ -62,6 +62,9 @@ enum class attack_detection_threshold_type_t {
 
     tcp_syn_packets_per_second,
     tcp_syn_bytes_per_second,
+
+    src_123_packets_per_second,
+    src_123_bytes_per_second,
 };
 
 
@@ -150,6 +153,7 @@ enum attack_type_t {
     ATTACK_ICMP_FLOOD             = 3,
     ATTACK_UDP_FLOOD              = 4,
     ATTACK_IP_FRAGMENTATION_FLOOD = 5,
+    ATTACK_NTP_FLOOD              = 6,
 };
 
 // Amplification types
@@ -316,11 +320,13 @@ class ban_settings_t {
     : enable_ban(false), enable_ban_ipv6(false), enable_ban_for_pps(false), enable_ban_for_bandwidth(false),
       enable_ban_for_flows_per_second(false), enable_ban_for_tcp_pps(false), enable_ban_for_tcp_bandwidth(false),
       enable_ban_for_udp_pps(false), enable_ban_for_udp_bandwidth(false), enable_ban_for_icmp_pps(false),
-      enable_ban_for_icmp_bandwidth(false), enable_ban_for_syn_pps(false),
-      enable_ban_for_syn_bandwidth(false), ban_threshold_tcp_mbps(0), ban_threshold_tcp_pps(0),
+      enable_ban_for_icmp_bandwidth(false), enable_ban_for_syn_pps(false), enable_ban_for_syn_bandwidth(false),
+      enable_ban_for_src_123_pps(false), enable_ban_for_src_123_bandwidth(false),
+      ban_threshold_tcp_mbps(0), ban_threshold_tcp_pps(0),
       ban_threshold_udp_mbps(0), ban_threshold_udp_pps(0), ban_threshold_icmp_mbps(0), ban_threshold_icmp_pps(0),
       ban_threshold_mbps(0), ban_threshold_flows(0), ban_threshold_pps(0),
-      ban_threshold_syn_pps(0), ban_threshold_syn_mbps(0) {
+      ban_threshold_syn_pps(0), ban_threshold_syn_mbps(0),
+      ban_threshold_src_123_pps(0), ban_threshold_src_123_mbps(0) {
     }
     bool enable_ban;
     bool enable_ban_ipv6;
@@ -341,6 +347,9 @@ class ban_settings_t {
     bool enable_ban_for_syn_pps;
     bool enable_ban_for_syn_bandwidth;
 
+    bool enable_ban_for_src_123_pps;
+    bool enable_ban_for_src_123_bandwidth;
+
     unsigned int ban_threshold_tcp_mbps;
     unsigned int ban_threshold_tcp_pps;
 
@@ -356,6 +365,9 @@ class ban_settings_t {
 
     unsigned int ban_threshold_syn_pps;
     unsigned int ban_threshold_syn_mbps;
+
+    unsigned int ban_threshold_src_123_pps;
+    unsigned int ban_threshold_src_123_mbps;
 };
 
 

@@ -224,6 +224,13 @@ void build_speed_counters_from_packet_counters(map_element_t& new_speed_element,
 
     new_speed_element.icmp_in_bytes  = uint64_t((double)vector_itr->icmp_in_bytes / speed_calc_period);
     new_speed_element.icmp_out_bytes = uint64_t((double)vector_itr->icmp_out_bytes / speed_calc_period);
+
+    // SRC port 123
+    new_speed_element.src_123_in_packets  = uint64_t((double)vector_itr->src_123_in_packets / speed_calc_period);
+    new_speed_element.src_123_out_packets = uint64_t((double)vector_itr->src_123_out_packets / speed_calc_period);
+
+    new_speed_element.src_123_in_bytes  = uint64_t((double)vector_itr->src_123_in_bytes / speed_calc_period);
+    new_speed_element.src_123_out_bytes = uint64_t((double)vector_itr->src_123_out_bytes / speed_calc_period);
 }
 
 void build_average_speed_counters_from_speed_counters(map_element_t* current_average_speed_element,
@@ -332,6 +339,23 @@ void build_average_speed_counters_from_speed_counters(map_element_t* current_ave
     current_average_speed_element->icmp_in_bytes =
         uint64_t(new_speed_element.icmp_in_bytes + exp_value * ((double)current_average_speed_element->icmp_in_bytes -
                                                                 (double)new_speed_element.icmp_in_bytes));
+
+    // Per packet counters for SRC port 123
+    current_average_speed_element->src_123_in_packets =
+        uint64_t(new_speed_element.src_123_in_packets + exp_value * ((double)current_average_speed_element->src_123_in_packets -
+                                                                  (double)new_speed_element.src_123_in_packets));
+
+    current_average_speed_element->src_123_out_packets =
+        uint64_t(new_speed_element.src_123_out_packets + exp_value * ((double)current_average_speed_element->src_123_out_packets -
+                                                                   (double)new_speed_element.src_123_out_packets));
+
+    current_average_speed_element->src_123_in_bytes =
+        uint64_t(new_speed_element.src_123_in_bytes + exp_value * ((double)current_average_speed_element->src_123_in_bytes -
+                                                                (double)new_speed_element.src_123_in_bytes));
+
+    current_average_speed_element->src_123_out_bytes =
+        uint64_t(new_speed_element.src_123_out_bytes + exp_value * ((double)current_average_speed_element->src_123_out_bytes -
+                                                                 (double)new_speed_element.src_123_out_bytes));
 }
 
 
@@ -645,6 +669,27 @@ ban_settings_t read_ban_settings(configuration_map_t configuration_map, std::str
         convert_string_to_integer(configuration_map[prefix + "threshold_syn_mbps"]);
     }
 
+    // SRC port 123 ban trigger and thresholds
+    if (configuration_map.count(prefix + "ban_for_src_123_pps") != 0) {
+        ban_settings.enable_ban_for_src_123_pps =
+        configuration_map[prefix + "ban_for_src_123_pps"] == "on";
+    }
+
+    if (configuration_map.count(prefix + "ban_for_src_123_mbps") != 0) {
+        ban_settings.enable_ban_for_src_123_bandwidth =
+        configuration_map[prefix + "ban_for_src_123_mbps"] == "on";
+    }
+
+    if (configuration_map.count(prefix + "threshold_src_123_pps") != 0) {
+        ban_settings.ban_threshold_src_123_pps =
+        convert_string_to_integer(configuration_map[prefix + "threshold_src_123_pps"]);
+    }
+
+    if (configuration_map.count(prefix + "threshold_src_123_mbps") != 0) {
+        ban_settings.ban_threshold_src_123_mbps =
+        convert_string_to_integer(configuration_map[prefix + "threshold_src_123_mbps"]);
+    }
+
     return ban_settings;
 }
 
@@ -767,6 +812,22 @@ bool we_should_ban_this_entity(map_element_t* average_speed_element,
         exceed_mbps_speed(average_speed_element->tcp_syn_in_bytes, average_speed_element->tcp_syn_out_bytes,
                           current_ban_settings.ban_threshold_syn_mbps)) {
         attack_detection_source = attack_detection_threshold_type_t::tcp_syn_bytes_per_second;;
+        return true;
+    }
+
+    // SRC port 123 check
+    if (current_ban_settings.enable_ban_for_src_123_pps &&
+        exceed_pps_speed(average_speed_element->src_123_in_packets, average_speed_element->src_123_out_packets,
+                         current_ban_settings.ban_threshold_src_123_pps)) {
+        attack_detection_source = attack_detection_threshold_type_t::src_123_packets_per_second;
+
+        return true;
+    }
+
+    if (current_ban_settings.enable_ban_for_src_123_bandwidth &&
+        exceed_mbps_speed(average_speed_element->src_123_in_bytes, average_speed_element->src_123_out_bytes,
+                          current_ban_settings.ban_threshold_src_123_mbps)) {
+        attack_detection_source = attack_detection_threshold_type_t::src_123_bytes_per_second;;
         return true;
     }
 
@@ -1560,6 +1621,13 @@ void execute_ip_ban(uint32_t client_ip, map_element_t average_speed_element, std
     current_attack.average_out_bytes   = average_speed_element.out_bytes;
     current_attack.average_out_flows   = average_speed_element.out_flows;
 
+    current_attack.src_123_in_packets  = average_speed_element.src_123_in_packets;
+    current_attack.src_123_out_packets = average_speed_element.src_123_out_packets;
+    current_attack.src_123_in_bytes    = average_speed_element.src_123_in_bytes;
+    current_attack.src_123_out_bytes   = average_speed_element.src_123_out_bytes;
+
+
+
     if (collect_attack_pcap_dumps) {
         bool buffer_allocation_result = current_attack.pcap_attack_dump.allocate_buffer(number_of_packets_for_pcap_attack_dump);
 
@@ -2106,6 +2174,11 @@ bool fill_attack_information(map_element_t average_speed_element,
     current_attack.average_out_packets = average_speed_element.out_packets;
     current_attack.average_out_bytes   = average_speed_element.out_bytes;
     current_attack.average_out_flows   = average_speed_element.out_flows;
+
+    current_attack.src_123_in_packets  = average_speed_element.src_123_in_packets;
+    current_attack.src_123_out_packets = average_speed_element.src_123_out_packets;
+    current_attack.src_123_in_bytes    = average_speed_element.src_123_in_bytes;
+    current_attack.src_123_out_bytes   = average_speed_element.src_123_out_bytes;
 
     return true;
 }
@@ -3004,6 +3077,11 @@ void increment_outgoing_counters(map_element_t* current_element,
     } else if (current_packet.protocol == IPPROTO_UDP) {
         __atomic_add_fetch(&current_element->udp_out_packets, sampled_number_of_packets, __ATOMIC_RELAXED);
         __atomic_add_fetch(&current_element->udp_out_bytes, sampled_number_of_bytes, __ATOMIC_RELAXED);
+
+        if (current_packet.source_port == 123) {
+            __sync_fetch_and_add(&current_element->src_123_out_packets, sampled_number_of_packets);
+            __sync_fetch_and_add(&current_element->src_123_out_bytes, sampled_number_of_bytes);
+        }
     } else if (current_packet.protocol == IPPROTO_ICMP) {
         __atomic_add_fetch(&current_element->icmp_out_packets, sampled_number_of_packets, __ATOMIC_RELAXED);
         __atomic_add_fetch(&current_element->icmp_out_bytes, sampled_number_of_bytes, __ATOMIC_RELAXED);
@@ -3042,6 +3120,11 @@ void increment_outgoing_counters(map_element_t* current_element,
     } else if (current_packet.protocol == IPPROTO_UDP) {
         __sync_fetch_and_add(&current_element->udp_out_packets, sampled_number_of_packets);
         __sync_fetch_and_add(&current_element->udp_out_bytes, sampled_number_of_bytes);
+
+        if (current_packet.source_port == 123) {
+            __sync_fetch_and_add(&current_element->src_123_out_packets, sampled_number_of_packets);
+            __sync_fetch_and_add(&current_element->src_123_out_bytes, sampled_number_of_bytes);
+        }
     } else if (current_packet.protocol == IPPROTO_ICMP) {
         __sync_fetch_and_add(&current_element->icmp_out_packets, sampled_number_of_packets);
         __sync_fetch_and_add(&current_element->icmp_out_bytes, sampled_number_of_bytes);
@@ -3084,6 +3167,11 @@ void increment_incoming_counters(map_element_t* current_element,
     } else if (current_packet.protocol == IPPROTO_UDP) {
         __atomic_add_fetch(&current_element->udp_in_packets, sampled_number_of_packets, __ATOMIC_RELAXED);
         __atomic_add_fetch(&current_element->udp_in_bytes, sampled_number_of_bytes, __ATOMIC_RELAXED);
+
+        if (current_packet.source_port == 123) {
+            __sync_fetch_and_add(&current_element->src_123_in_packets, sampled_number_of_packets);
+            __sync_fetch_and_add(&current_element->src_123_in_bytes, sampled_number_of_bytes);
+        }
     } else if (current_packet.protocol == IPPROTO_ICMP) {
         __atomic_add_fetch(&current_element->icmp_in_packets, sampled_number_of_packets, __ATOMIC_RELAXED);
         __atomic_add_fetch(&current_element->icmp_in_bytes, sampled_number_of_bytes, __ATOMIC_RELAXED);
@@ -3125,6 +3213,11 @@ void increment_incoming_counters(map_element_t* current_element,
     } else if (current_packet.protocol == IPPROTO_UDP) {
         __sync_fetch_and_add(&current_element->udp_in_packets, sampled_number_of_packets);
         __sync_fetch_and_add(&current_element->udp_in_bytes, sampled_number_of_bytes);
+
+        if (current_packet.source_port == 123) {
+            __sync_fetch_and_add(&current_element->src_123_in_packets, sampled_number_of_packets);
+            __sync_fetch_and_add(&current_element->src_123_in_bytes, sampled_number_of_bytes);
+        }
     } else if (current_packet.protocol == IPPROTO_ICMP) {
         __sync_fetch_and_add(&current_element->icmp_in_packets, sampled_number_of_packets);
         __sync_fetch_and_add(&current_element->icmp_in_bytes, sampled_number_of_bytes);

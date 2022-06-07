@@ -1002,6 +1002,11 @@ json_object* serialize_attack_description_to_json(attack_details_t& current_atta
     json_object_object_add(jobj, "incoming_icmp_pps", json_object_new_int(current_attack.icmp_in_packets));
     json_object_object_add(jobj, "outgoing_icmp_pps", json_object_new_int(current_attack.icmp_out_packets));
 
+    json_object_object_add(jobj, "incoming_src_123_traffic", json_object_new_int(current_attack.src_123_in_bytes));
+    json_object_object_add(jobj, "outgoing_src_123_traffic", json_object_new_int(current_attack.src_123_out_bytes));
+    json_object_object_add(jobj, "incoming_src_123_pps", json_object_new_int(current_attack.src_123_in_packets));
+    json_object_object_add(jobj, "outgoing_src_123_pps", json_object_new_int(current_attack.src_123_out_packets));
+
     return jobj;
 }
 
@@ -1056,13 +1061,19 @@ std::string serialize_attack_description(attack_details_t& current_attack) {
         << "Incoming icmp traffic: " << convert_speed_to_mbps(current_attack.icmp_in_bytes) << " mbps\n"
         << "Outgoing icmp traffic: " << convert_speed_to_mbps(current_attack.icmp_out_bytes) << " mbps\n"
         << "Incoming icmp pps: " << current_attack.icmp_in_packets << " packets per second\n"
-        << "Outgoing icmp pps: " << current_attack.icmp_out_packets << " packets per second\n";
+        << "Outgoing icmp pps: " << current_attack.icmp_out_packets << " packets per second\n"
+
+        << "Incoming src_123 traffic: " << convert_speed_to_mbps(current_attack.src_123_in_bytes) << " mbps\n"
+        << "Outgoing src_123 traffic: " << convert_speed_to_mbps(current_attack.src_123_out_bytes) << " mbps\n"
+        << "Incoming src_123 pps: " << current_attack.src_123_in_packets << " packets per second\n"
+        << "Outgoing src_123 pps: " << current_attack.src_123_out_packets << " packets per second\n";
 
     return attack_description.str();
 }
 
 attack_type_t detect_attack_type(attack_details_t& current_attack) {
     double threshold_value = 0.9;
+    double amplification_threshold_value = 0.8;
 
     if (current_attack.attack_direction == INCOMING) {
         if (current_attack.tcp_syn_in_packets > threshold_value * current_attack.in_packets) {
@@ -1071,6 +1082,8 @@ attack_type_t detect_attack_type(attack_details_t& current_attack) {
             return ATTACK_ICMP_FLOOD;
         } else if (current_attack.fragmented_in_packets > threshold_value * current_attack.in_packets) {
             return ATTACK_IP_FRAGMENTATION_FLOOD;
+        } else if (current_attack.src_123_in_packets > amplification_threshold_value * current_attack.in_packets) {
+            return ATTACK_NTP_FLOOD;
         } else if (current_attack.udp_in_packets > threshold_value * current_attack.in_packets) {
             return ATTACK_UDP_FLOOD;
         }
@@ -1081,6 +1094,8 @@ attack_type_t detect_attack_type(attack_details_t& current_attack) {
             return ATTACK_ICMP_FLOOD;
         } else if (current_attack.fragmented_out_packets > threshold_value * current_attack.out_packets) {
             return ATTACK_IP_FRAGMENTATION_FLOOD;
+        } else if (current_attack.src_123_out_packets > amplification_threshold_value * current_attack.out_packets) {
+            return ATTACK_NTP_FLOOD;
         } else if (current_attack.udp_out_packets > threshold_value * current_attack.out_packets) {
             return ATTACK_UDP_FLOOD;
         }
@@ -1098,6 +1113,8 @@ std::string get_printable_attack_name(attack_type_t attack) {
         return "udp_flood";
     } else if (attack == ATTACK_IP_FRAGMENTATION_FLOOD) {
         return "ip_fragmentation";
+    } else if (attack == ATTACK_NTP_FLOOD) {
+        return "ntp_flood";
     } else if (attack == ATTACK_UNKNOWN) {
         return "unknown";
     } else {

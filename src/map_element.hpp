@@ -44,6 +44,12 @@ class map_element_t {
     uint64_t in_flows  = 0;
     uint64_t out_flows = 0;
 
+    // SRC port 123
+    uint64_t src_123_in_packets  = 0;
+    uint64_t src_123_out_packets  = 0;
+    uint64_t src_123_in_bytes    = 0;
+    uint64_t src_123_out_bytes    = 0;
+
     // Is total counters fields are zero? We are not handling per protocol counters here because we assume they should
     // be counted twice
     // Once: in total counter (in_bytes) and secondly in per protocol counter (for example: udp_in_bytes)
@@ -85,6 +91,11 @@ class map_element_t {
 
         in_flows  = 0;
         out_flows = 0;
+
+        src_123_in_packets  = 0;
+        src_123_out_packets  = 0;
+        src_123_in_bytes    = 0;
+        src_123_out_bytes    = 0;
     }
 
     template <class Archive> void serialize(Archive& ar, const unsigned int version) {
@@ -114,5 +125,9 @@ class map_element_t {
         ar& BOOST_SERIALIZATION_NVP(icmp_out_bytes);
         ar& BOOST_SERIALIZATION_NVP(in_flows);
         ar& BOOST_SERIALIZATION_NVP(out_flows);
+        ar& BOOST_SERIALIZATION_NVP(src_123_in_packets);
+        ar& BOOST_SERIALIZATION_NVP(src_123_out_packets);
+        ar& BOOST_SERIALIZATION_NVP(src_123_in_bytes);
+        ar& BOOST_SERIALIZATION_NVP(src_123_out_bytes);
     }
 };
