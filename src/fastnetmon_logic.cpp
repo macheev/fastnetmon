@@ -624,6 +624,27 @@ ban_settings_t read_ban_settings(configuration_map_t configuration_map, std::str
         ban_settings.ban_threshold_flows = convert_string_to_integer(configuration_map[prefix + "threshold_flows"]);
     }
 
+    // SYN ban trigger and thresholds
+    if (configuration_map.count(prefix + "ban_for_syn_pps") != 0) {
+        ban_settings.enable_ban_for_syn_pps =
+        configuration_map[prefix + "ban_for_syn_pps"] == "on";
+    }
+
+    if (configuration_map.count(prefix + "ban_for_syn_mbps") != 0) {
+        ban_settings.enable_ban_for_syn_bandwidth =
+        configuration_map[prefix + "ban_for_syn_mbps"] == "on";
+    }
+
+    if (configuration_map.count(prefix + "threshold_syn_pps") != 0) {
+        ban_settings.ban_threshold_syn_pps =
+        convert_string_to_integer(configuration_map[prefix + "threshold_syn_pps"]);
+    }
+
+    if (configuration_map.count(prefix + "threshold_syn_mbps") != 0) {
+        ban_settings.ban_threshold_syn_mbps =
+        convert_string_to_integer(configuration_map[prefix + "threshold_syn_mbps"]);
+    }
+
     return ban_settings;
 }
 
@@ -730,6 +751,22 @@ bool we_should_ban_this_entity(map_element_t* average_speed_element,
         exceed_mbps_speed(average_speed_element->icmp_in_bytes, average_speed_element->icmp_out_bytes,
                           current_ban_settings.ban_threshold_icmp_mbps)) {
         attack_detection_source = attack_detection_threshold_type_t::icmp_bytes_per_second;
+        return true;
+    }
+
+    // SYN flood check
+    if (current_ban_settings.enable_ban_for_syn_pps &&
+        exceed_pps_speed(average_speed_element->tcp_syn_in_packets, average_speed_element->tcp_syn_out_packets,
+                         current_ban_settings.ban_threshold_syn_pps)) {
+        attack_detection_source = attack_detection_threshold_type_t::tcp_syn_packets_per_second;
+
+        return true;
+    }
+
+    if (current_ban_settings.enable_ban_for_syn_bandwidth &&
+        exceed_mbps_speed(average_speed_element->tcp_syn_in_bytes, average_speed_element->tcp_syn_out_bytes,
+                          current_ban_settings.ban_threshold_syn_mbps)) {
+        attack_detection_source = attack_detection_threshold_type_t::tcp_syn_bytes_per_second;;
         return true;
     }
 
@@ -2960,7 +2997,7 @@ void increment_outgoing_counters(map_element_t* current_element,
         __atomic_add_fetch(&current_element->tcp_out_packets, sampled_number_of_packets, __ATOMIC_RELAXED);
         __atomic_add_fetch(&current_element->tcp_out_bytes, sampled_number_of_bytes, __ATOMIC_RELAXED);
 
-        if (extract_bit_value(current_packet.flags, TCP_SYN_FLAG_SHIFT)) {
+        if ((extract_bit_value(current_packet.flags, TCP_SYN_FLAG_SHIFT)) && !(extract_bit_value(current_packet.flags, TCP_ACK_FLAG_SHIFT))) {
             __atomic_add_fetch(&current_element->tcp_syn_out_packets, sampled_number_of_packets, __ATOMIC_RELAXED);
             __atomic_add_fetch(&current_element->tcp_syn_out_bytes, sampled_number_of_bytes, __ATOMIC_RELAXED);
         }    
@@ -2998,7 +3035,7 @@ void increment_outgoing_counters(map_element_t* current_element,
         __sync_fetch_and_add(&current_element->tcp_out_packets, sampled_number_of_packets);
         __sync_fetch_and_add(&current_element->tcp_out_bytes, sampled_number_of_bytes);
 
-        if (extract_bit_value(current_packet.flags, TCP_SYN_FLAG_SHIFT)) {
+        if ((extract_bit_value(current_packet.flags, TCP_SYN_FLAG_SHIFT)) && !(extract_bit_value(current_packet.flags, TCP_ACK_FLAG_SHIFT))) {
             __sync_fetch_and_add(&current_element->tcp_syn_out_packets, sampled_number_of_packets);
             __sync_fetch_and_add(&current_element->tcp_syn_out_bytes, sampled_number_of_bytes);
         }
@@ -3040,7 +3077,7 @@ void increment_incoming_counters(map_element_t* current_element,
         __atomic_add_fetch(&current_element->tcp_in_packets, sampled_number_of_packets, __ATOMIC_RELAXED);
         __atomic_add_fetch(&current_element->tcp_in_bytes, sampled_number_of_bytes, __ATOMIC_RELAXED);
 
-        if (extract_bit_value(current_packet.flags, TCP_SYN_FLAG_SHIFT)) {
+        if ((extract_bit_value(current_packet.flags, TCP_SYN_FLAG_SHIFT)) && !(extract_bit_value(current_packet.flags, TCP_ACK_FLAG_SHIFT))) {
             __atomic_add_fetch(&current_element->tcp_syn_in_packets, sampled_number_of_packets, __ATOMIC_RELAXED);
             __atomic_add_fetch(&current_element->tcp_syn_in_bytes, sampled_number_of_bytes, __ATOMIC_RELAXED);
         }
@@ -3081,7 +3118,7 @@ void increment_incoming_counters(map_element_t* current_element,
         __sync_fetch_and_add(&current_element->tcp_in_packets, sampled_number_of_packets);
         __sync_fetch_and_add(&current_element->tcp_in_bytes, sampled_number_of_bytes);
 
-        if (extract_bit_value(current_packet.flags, TCP_SYN_FLAG_SHIFT)) {
+        if ((extract_bit_value(current_packet.flags, TCP_SYN_FLAG_SHIFT)) && !(extract_bit_value(current_packet.flags, TCP_ACK_FLAG_SHIFT))) {
             __sync_fetch_and_add(&current_element->tcp_syn_in_packets, sampled_number_of_packets);
             __sync_fetch_and_add(&current_element->tcp_syn_in_bytes, sampled_number_of_bytes);
         }
