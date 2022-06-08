@@ -408,12 +408,14 @@ void fill_per_protocol_countres_for_influxdb(const map_element_t* current_speed_
     plain_total_counters_map["tcp_syn_packets_incoming"]    = current_speed_element->tcp_syn_in_packets;
     plain_total_counters_map["udp_packets_incoming"]        = current_speed_element->udp_in_packets;
     plain_total_counters_map["icmp_packets_incoming"]       = current_speed_element->icmp_in_packets;
+    plain_total_counters_map["src_123_packets_incoming"]    = current_speed_element->src_123_in_packets;
 
     plain_total_counters_map["fragmented_bits_incoming"] = current_speed_element->fragmented_in_bytes * 8;
     plain_total_counters_map["tcp_bits_incoming"]        = current_speed_element->tcp_in_bytes * 8;
     plain_total_counters_map["tcp_syn_bits_incoming"]    = current_speed_element->tcp_syn_in_bytes * 8;
     plain_total_counters_map["udp_bits_incoming"]        = current_speed_element->udp_in_bytes * 8;
     plain_total_counters_map["icmp_bits_incoming"]       = current_speed_element->icmp_in_bytes * 8;
+    plain_total_counters_map["src_123_bits_incoming"]    = current_speed_element->src_123_in_bytes * 8;
 
 
     // Outgoing
@@ -422,12 +424,14 @@ void fill_per_protocol_countres_for_influxdb(const map_element_t* current_speed_
     plain_total_counters_map["tcp_syn_packets_outgoing"]    = current_speed_element->tcp_syn_out_packets;
     plain_total_counters_map["udp_packets_outgoing"]        = current_speed_element->udp_out_packets;
     plain_total_counters_map["icmp_packets_outgoing"]       = current_speed_element->icmp_out_packets;
+    plain_total_counters_map["src_123_packets_outgoing"]    = current_speed_element->src_123_out_packets;
 
     plain_total_counters_map["fragmented_bits_outgoing"] = current_speed_element->fragmented_out_bytes * 8;
     plain_total_counters_map["tcp_bits_outgoing"]        = current_speed_element->tcp_out_bytes * 8;
     plain_total_counters_map["tcp_syn_bits_outgoing"]    = current_speed_element->tcp_syn_out_bytes * 8;
     plain_total_counters_map["udp_bits_outgoing"]        = current_speed_element->udp_out_bytes * 8;
     plain_total_counters_map["icmp_bits_outgoing"]       = current_speed_element->icmp_out_bytes * 8;
+    plain_total_counters_map["src_123_bits_outgoing"]    = current_speed_element->src_123_out_bytes * 8;
 }
 
 // Fills special structure which we use to export metrics into InfluxDB
