@@ -290,6 +290,8 @@ bool push_hosts_traffic_counters_to_influxdb(std::string influx_database,
 
             fill_main_counters_for_influxdb(current_speed_element, plain_total_counters_map, true);
 
+            fill_per_protocol_countres_for_influxdb(current_speed_element, plain_total_counters_map);
+
             // Key: client_ip_as_string
             hosts_vector.push_back(std::make_pair(client_ip_as_string, plain_total_counters_map));
         }
@@ -356,6 +358,8 @@ bool push_network_traffic_counters_to_influxdb(std::string influx_database,
         std::string subnet_as_string = convert_subnet_to_string(itr->first);
 
         fill_main_counters_for_influxdb(speed, plain_total_counters_map, false);
+
+        fill_per_protocol_countres_for_influxdb(speed, plain_total_counters_map);
 
         influxdb_writes_total++;
 
